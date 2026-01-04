@@ -5,6 +5,10 @@ import logging
 import json
 from django.views.decorators.csrf import csrf_exempt
 
+# New imports for Car models and populate script
+from .models import CarMake, CarModel
+from .populate import initiate
+
 logger = logging.getLogger(__name__)
 
 @csrf_exempt
@@ -41,8 +45,26 @@ def registration(request):
         logger.debug("{} is new user".format(username))
 
     if not username_exist:
-        user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name, password=password, email=email)
+        user = User.objects.create_user(
+            username=username, 
+            first_name=first_name, 
+            last_name=last_name, 
+            password=password, 
+            email=email
+        )
         login(request, user)
         return JsonResponse({"userName": username, "status": "Authenticated"})
     else:
         return JsonResponse({"userName": username, "error": "Already Registered"})
+
+# New view to handle fetching cars and auto-populating if empty
+def get_cars(request):
+    count = CarMake.objects.filter().count()
+    print(count)
+    if(count == 0):
+        initiate()
+    car_models = CarModel.objects.select_related('car_make')
+    cars = []
+    for car_model in car_models:
+        cars.append({"CarModel": car_model.name, "CarMake": car_model.car_make.name})
+    return JsonResponse({"CarModels":cars})
